@@ -32,7 +32,7 @@ t --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-lib
 
 
 #### Linux:
-1. sudo apt install ffmpeg (if codes are missing: sudo apt-get install libavcodec-extra)
+1. sudo apt install ffmpeg (if codes are missing: sudo apt install libavcodec-extra)
 2. Add ffmpeg-binaries in SYSPATH, if not done
 
 ### 2. Python Dependencies:
