@@ -1,7 +1,7 @@
 from setuptools import setup
 
 install_requires = [
-    'psutil=^5.9.0',
+    'psutil==5.9.0',
 ]
 
 setup(
