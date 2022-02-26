@@ -8,23 +8,61 @@ import psutil
 
 
 class Sound:
-    def __init__(self, file_path: Path) -> None:
+    def __init__(self, file_path: Path, sound_volume: Optional[int] = None) -> None:
         self.file_path: Path = file_path
         self.process: Optional[psutil.Process] = None
-        self.loops = None
+        self.loops: Optional[int] = None
+        self._volume = None  # initialize _volume before using probperty 'volume'
+        self.volume: int = sound_volume  # volume property validate
+
+    @property
+    def volume(self) -> int:
+        return self._volume
+
+    @volume.setter
+    def volume(self, value: int) -> None:
+        if self._volume != value:
+            if value > 100:
+                print("Volumes above 100 are treated as 100.", flush=True)
+                value = 100
+            elif value < 0:
+                print("Negative volumes are treated as 0.", flush=True)
+                value = 0
+
+            self._volume = value
+            print(f"Set sound volume to {value}.", flush=True)
 
 
 class PyThound:
-    def __init__(self, app="ffplay"):
+    def __init__(self, app="ffplay", player_volume: int = 100) -> None:
         self.app_name: str = app
         self.app_args: List[str] = []
         self.sound_files: List[Sound] = []  # {sound_id:
+        self._volume = 100  # initialize _volume before using probperty 'volume'
+        self.volume: int = player_volume  # volume property validate
 
         if self.app_name == "ffplay":
             self.app_args = ["-nodisp", "-autoexit", "-loglevel", "quiet"]
 
-    def add_sound(self, file_path: Path) -> Sound:
-        new_sound = Sound(file_path)
+    @property
+    def volume(self) -> int:
+        return self._volume
+
+    @volume.setter
+    def volume(self, value: int) -> None:
+        if self._volume != value:
+            if value > 100:
+                print("Volumes above 100 are treated as 100.", flush=True)
+                value = 100
+            elif value < 0:
+                print("Negative volumes are treated as 0.", flush=True)
+                value = 0
+
+            self._volume = value
+            print(f"Set player volume to {value}.", flush=True)
+
+    def add_sound(self, file_path: Path, initial_sound_volume: Optional[int]=None) -> Sound:
+        new_sound = Sound(file_path, sound_volume=initial_sound_volume)
         self.sound_files.append(new_sound)
         return new_sound
 
@@ -41,6 +79,10 @@ class PyThound:
 
         app_params = [self.app_name]
         app_params.extend(self.app_args)
+
+        volume = sound.volume if sound.volume else self.volume
+
+        app_params.extend(["-volume", str(volume)])
 
         if loop != 0:
             app_params.extend(["-loop", str(loop)])
@@ -61,7 +103,10 @@ class PyThound:
         if sound.loops != -1:
             sound.process.wait()
         else:
-            print("Error in wait_for(): can't wait for a sound, which is in endless loop.")
+            print(
+                "Error in wait_for(): can't wait for a sound, which is in endless loop.",
+                flush=True
+            )
             return
 
     def stop(self, sound: Sound) -> None:
@@ -89,9 +134,9 @@ class PyThound:
                 flush=True,
             )
         elif sound.process.status() in (
-            psutil.STATUS_STOPPED,
-            psutil.STATUS_PARKED,
-            psutil.STATUS_DISK_SLEEP,
+                psutil.STATUS_STOPPED,
+                psutil.STATUS_PARKED,
+                psutil.STATUS_DISK_SLEEP,
         ):
             sound.process.resume()
             print(f"Continue '{sound.file_path}'.", flush=True)
