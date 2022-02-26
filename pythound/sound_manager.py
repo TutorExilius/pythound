@@ -34,7 +34,7 @@ class Sound:
             print(f"Set sound volume to {value}.", flush=True)
 
 
-class PyThound:
+class Player:
     def __init__(self, app="ffplay", player_volume: int = 100, player_speed: float = 1.0) -> None:
         self.app_name: str = app
         self.app_args: List[str] = []

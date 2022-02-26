@@ -1,4 +1,4 @@
-# PyThound
+# pythound
 
 An async sound library for python.
 
