@@ -11,9 +11,7 @@ class Sound:
     def __init__(self, file_path: Path) -> None:
         self.file_path: Path = file_path
         self.process: Optional[psutil.Process] = None
-
-    def __eq__(self, other: Sound) -> bool:
-        return self.file_path == other.file_path
+        self.loops = None
 
 
 class PyThound:
