@@ -4,7 +4,13 @@ An async sound library for python.
 
 Created in a twitch live session https://twitch.tv/TutorExilius
 
-## Used FFPLAY version:
+This package allows you to play sounds asynchronously in python.
+It is also possible to play sound synchronously by using the 'wait_for()' method.
+
+In the current version, you need to install ffmpeg and you have to add ffmpeg to the system path (environmental variable).
+
+
+## Developped with following ffplay/ffmpeg version:
 
 ``` 
 ffplay version 4.3.1-2021-01-26-essentials_build-www.gyan.dev Copyright (c) 2003-2021 the FFmpeg developers
