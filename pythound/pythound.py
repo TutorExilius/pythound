@@ -35,33 +35,24 @@ class PyThound:
             n = loop n times
             -1 = infinite loop
         """
-        if not sound.process:
-            app_params = [self.app_name]
-            app_params.extend(self.app_args)
 
-            if loop != 0:
-                app_params.extend(["-loop", str(loop)])
-
-            app_params.append(str(sound.file_path))
-
-            process = subprocess.Popen(app_params)
-            print(f"Play '{sound.file_path}'.", flush=True)
-
-            ps_process = psutil.Process(pid=process.pid)
-            sound.process = ps_process
-            sound.loops = loop
-        elif sound.process.status() == psutil.STATUS_RUNNING:
-            print(
-                f"Error in playing '{sound.file_path}', sound is already playing.",
-                flush=True,
-            )
-        elif sound.process.status() == psutil.STATUS_SUSPENDED:
-            print(
-                f"Error in playing '{sound.file_path}', sound is paused, continue with: continue_sound().",
-                flush=True,
-            )
-        else:
+        if sound.process:
             self._reset_process_state(sound)
+
+        app_params = [self.app_name]
+        app_params.extend(self.app_args)
+
+        if loop != 0:
+            app_params.extend(["-loop", str(loop)])
+
+        app_params.append(str(sound.file_path))
+
+        process = subprocess.Popen(app_params)
+        print(f"Play '{sound.file_path}'.", flush=True)
+
+        ps_process = psutil.Process(pid=process.pid)
+        sound.process = ps_process
+        sound.loops = loop
 
     def wait_for(self, sound: Sound) -> None:
         if not sound.process or sound.process.status() != psutil.STATUS_RUNNING:
