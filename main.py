@@ -8,5 +8,6 @@ try:
     sound_manager.play(
         sound, loop=-1
     )  # loop: -1=infinite, 0=no loop, number > 0 = n repeats
+    sound_manager.wait_for(sound)
 finally:
     sound_manager.stop_all()

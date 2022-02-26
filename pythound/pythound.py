@@ -49,6 +49,7 @@ class PyThound:
 
             ps_process = psutil.Process(pid=process.pid)
             sound.process = ps_process
+            sound.loops = loop
         elif sound.process.status() == psutil.STATUS_RUNNING:
             print(
                 f"Error in playing '{sound.file_path}', sound is already playing.",
@@ -61,6 +62,16 @@ class PyThound:
             )
         else:
             self._reset_process_state(sound)
+
+    def wait_for(self, sound: Sound) -> None:
+        if not sound.process or sound.process.status() != psutil.STATUS_RUNNING:
+            return
+
+        if sound.loops != -1:
+            sound.process.wait()
+        else:
+            print("Error in wait_for(): can't wait for a sound, which is in endless loop.")
+            return
 
     def stop(self, sound: Sound) -> None:
         if not sound.process:
@@ -120,6 +131,7 @@ class PyThound:
             return
 
         process = sound.process
+        sound.loops = None
         sound.process = None
 
         try:
