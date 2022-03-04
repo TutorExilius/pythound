@@ -2,142 +2,106 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import psutil
 
 
-class FFPLAY_Properties:
-    def __init__(
-            self,
-            parent: str,
-            volume: Optional[int] = None,
-            speed: Optional[float] = None,
-    ):
-        self._parent = parent
-        self.volume = volume
-        self.speed = speed
+class FFPLAY_Settings:
+    def __init__(self, parent_class_name: str = ""):
+        self.app_name: str = "FFPLAY"
+        self._parent_class_name = parent_class_name
+        self.supported_volume_range: Tuple[int, int] = (0, 100)
+        self.supported_speed_range: Tuple[float, float] = (0.5, 100.0)
+        self._volume: Optional[int] = None
+        self._speed: Optional[float] = None
 
     @property
-    def volume(self) -> int:
+    def volume(self) -> Optional[int]:
         return self._volume
 
-    @volume.setter
-    def volume(self, value: Optional[int]) -> None:
-        if value is None:
-            if self._parent != "Sound":
-                print("It is not possible to set the player volume to None.")
-                return
+    def set_volume(self, volume: int) -> bool:
+        min_volume, max_volume = self.supported_volume_range
+        if min_volume <= volume <= max_volume:
+            self._volume = volume
+            print(
+                f"{self.app_name} ({self._parent_class_name}): Set volume to {volume}",
+                flush=True,
+            )
+            return True
         else:
-            if value > 100:
-                print("Volumes above 100 are treated as 100.", flush=True)
-                value = 100
-            elif value < 0:
-                print("Negative volumes are treated as 0.", flush=True)
-                value = 0
-
-        self._volume = value
-        print(f"Set {self._parent} sound volume to {value}.", flush=True)
+            supported_volume_range_str = "{} - {}".format(*self.supported_volume_range)
+            print(
+                f"{self.app_name} ({self._parent_class_name}): Can't set volume to {volume} (supported values: {supported_volume_range_str})",
+                flush=True,
+            )
+            return False
 
     @property
-    def speed(self) -> float:
+    def speed(self) -> Optional[float]:
         return self._speed
 
-    @speed.setter
-    def speed(self, value: Optional[float]) -> None:
-        if value is None:
-            if self._parent != "Sound":
-                print("It is not possible to set the player speed to None.")
-                return
+    def set_speed(self, speed: float) -> bool:
+        min_speed, max_speed = self.supported_speed_range
+        if min_speed <= speed <= max_speed:
+            self._speed = speed
+            print(
+                f"{self.app_name} ({self._parent_class_name}): Set speed to {speed}",
+                flush=True,
+            )
+            return True
         else:
-            if value > 100:
-                value = 100
-                print("Speed above 100 is treated as 100.", flush=True)
-            elif value < 0.5:
-                value = 0.5
-                print("Speed less than 0.5 is treated as 0.5", flush=True)
-
-        self._speed = value
-        print(f"Set {self._parent} speed to {value}.", flush=True)
+            supported_speed_range_str = "{} - {}".format(*self.supported_speed_range)
+            print(
+                f"{self.app_name} ({self._parent_class_name}): Can't set speed to {speed} (supported values: {supported_speed_range_str})",
+                flush=True,
+            )
+            return False
 
 
 class Sound:
     def __init__(
-            self,
-            app_name: str,
-            sound_file_path: Path,
-            sound_volume: Optional[int] = None,
-            sound_speed: Optional[float] = None,
+        self,
+        app_name: str,
+        sound_file_path: Path,
+        sound_volume: Optional[int] = None,
+        sound_speed: Optional[float] = None,
     ) -> None:
-        self.app_name = app_name
         self.sound_file_path: Path = sound_file_path
         self.process: Optional[psutil.Process] = None
         self._loop: Optional[int] = None
 
-        if self.app_name == "ffplay":
-            self._properies = FFPLAY_Properties(
-                parent="Sound",
-                volume=sound_volume,
-                speed=sound_speed,
-            )
+        if app_name.lower() == "ffplay":
+            self.settings = FFPLAY_Settings(self.__class__.__name__)
 
-    @property
-    def volume(self) -> int:
-        return self._properies.volume
+            if sound_volume:
+                self.settings.set_volume(sound_volume)
 
-    @volume.setter
-    def volume(self, value: int) -> None:
-        self._properies.volume = value
-
-    @property
-    def speed(self) -> float:
-        return self._properies.speed
-
-    @speed.setter
-    def speed(self, value: float) -> None:
-        self._properies.speed = value
+            if sound_speed:
+                self.settings.set_speed(sound_speed)
 
 
 class Player:
     def __init__(
-            self, app_name="ffplay", player_volume: int = 100, player_speed: float = 1.0
+        self, app_name="FFPLAY", player_volume: int = 100, player_speed: float = 1.0
     ) -> None:
-        self.app_name: str = app_name
         self.sound_files: List[Sound] = []  # {sound_id:
         self._app_args: List[str] = []
 
-        if self.app_name == "ffplay":
+        if app_name.lower() == "ffplay":
             self._app_args = ["-nodisp", "-autoexit", "-loglevel", "quiet"]
-            self._properies = FFPLAY_Properties(
-                parent="Player",
-                volume=player_volume or 100,
-                speed=player_speed or 1.0,
-            )
-
-    @property
-    def volume(self) -> int:
-        return self._properies.volume
-
-    @volume.setter
-    def volume(self, value: int) -> None:
-        self._properies.volume = value
-
-    @property
-    def speed(self) -> float:
-        return self._properies.speed
-
-    @speed.setter
-    def speed(self, value: float) -> None:
-        self._properies.speed = value
+            self.settings = FFPLAY_Settings(self.__class__.__name__)
+            self.settings.set_volume(player_volume)
+            self.settings.set_speed(player_speed)
 
     def add_sound(
-            self,
-            sound_file_path: Path,
-            initial_sound_volume: Optional[int] = None,
-            initial_sound_speed: Optional[int] = None,
+        self,
+        sound_file_path: Path,
+        initial_sound_volume: Optional[int] = None,
+        initial_sound_speed: Optional[int] = None,
     ) -> Sound:
         new_sound = Sound(
-            self.app_name,
+            self.settings.app_name,
             sound_file_path=sound_file_path,
             sound_volume=initial_sound_volume,
             sound_speed=initial_sound_speed,
@@ -156,16 +120,19 @@ class Player:
         if sound.process:
             self._reset_process_state(sound)
 
-        app_params = [self.app_name]
+        app_name = self.settings.app_name
+        app_params = [app_name]
         app_params.extend(self._app_args)
 
-        volume = sound.volume if sound.volume else self.volume
+        volume = (
+            sound.settings.volume if sound.settings.volume else self.settings.volume
+        )
         app_params.extend(["-volume", str(volume)])
 
         if loop != 0:
             app_params.extend(["-loop", str(loop)])
 
-        speed = sound.speed if sound.speed else self.speed
+        speed = sound.settings.speed if sound.settings.speed else self.settings.speed
         app_params.extend(["-af", f"atempo={speed}"])
 
         app_params.append(str(sound.sound_file_path))
@@ -214,9 +181,9 @@ class Player:
                 flush=True,
             )
         elif sound.process.status() in (
-                psutil.STATUS_STOPPED,
-                psutil.STATUS_PARKED,
-                psutil.STATUS_DISK_SLEEP,
+            psutil.STATUS_STOPPED,
+            psutil.STATUS_PARKED,
+            psutil.STATUS_DISK_SLEEP,
         ):
             sound.process.resume()
             print(f"Continue '{sound.sound_file_path}'.", flush=True)
