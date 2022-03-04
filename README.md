@@ -30,7 +30,7 @@ t --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-lib
 ```
 
 ## Installation (pythound):
-pip install git+https://github.com/TutorExilius/pythound
+```pip install git+https://github.com/TutorExilius/pythound```
 (git required)
 
 PyPI not supported yet. :(
