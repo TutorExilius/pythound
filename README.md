@@ -29,7 +29,14 @@ t --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-lib
   libpostproc    55.  7.100 / 55.  7.100
 ```
 
-## Installation:
+## Installation (pythound):
+pip install git+https://github.com/TutorExilius/pythound
+(git required)
+
+PyPI not supported yet. :(
+
+
+## Installation (Development):
 ### 1. Install ffmpeg:
 
 #### Windows:
