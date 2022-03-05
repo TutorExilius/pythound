@@ -25,14 +25,14 @@ class FFPLAY_Settings:
         if min_volume <= volume <= max_volume:
             self._volume = volume
             print(
-                f"{self.app_name} ({self._parent_class_name}): Set volume to {volume}",
+                f"{self.app_name} ({self._parent_class_name}): Set volume to {volume}.",
                 flush=True,
             )
             return True
         else:
             supported_volume_range_str = "{} - {}".format(*self.supported_volume_range)
             print(
-                f"{self.app_name} ({self._parent_class_name}): Can't set volume to {volume} (supported values: {supported_volume_range_str})",
+                f"{self.app_name} ({self._parent_class_name}): Can't set volume to {volume} (supported values: {supported_volume_range_str}).",
                 flush=True,
             )
             return False
@@ -46,14 +46,14 @@ class FFPLAY_Settings:
         if min_speed <= speed <= max_speed:
             self._speed = speed
             print(
-                f"{self.app_name} ({self._parent_class_name}): Set speed to {speed}",
+                f"{self.app_name} ({self._parent_class_name}): Set speed to {speed}.",
                 flush=True,
             )
             return True
         else:
             supported_speed_range_str = "{} - {}".format(*self.supported_speed_range)
             print(
-                f"{self.app_name} ({self._parent_class_name}): Can't set speed to {speed} (supported values: {supported_speed_range_str})",
+                f"{self.app_name} ({self._parent_class_name}): Can't set speed to {speed} (supported values: {supported_speed_range_str}).",
                 flush=True,
             )
             return False
@@ -70,6 +70,7 @@ class Sound:
         self.sound_file_path: Path = sound_file_path
         self.process: Optional[psutil.Process] = None
         self._loop: Optional[int] = None
+        self._duration: int = 0
 
         if app_name.lower() == "ffplay":
             self.settings = FFPLAY_Settings(self.__class__.__name__)
@@ -94,6 +95,31 @@ class Player:
             self.settings.set_volume(player_volume)
             self.settings.set_speed(player_speed)
 
+    def _get_duration(self, sound: Sound) -> int:
+        duration: int = -1
+
+        if self.settings.app_name.lower() == "ffplay":
+            ffprobe_args = [
+                "ffprobe",
+                "-i",
+                str(sound.sound_file_path),
+                "-show_entries",
+                "format=duration",
+                "-v",
+                "quiet",
+                "-of",
+                "csv=p=0",
+            ]
+
+            process = subprocess.Popen(ffprobe_args, stdout=subprocess.PIPE)
+            out, err = process.communicate()
+            out_str = out.decode(encoding="utf8").strip()
+
+            if out_str:
+                duration = int(out.decode(encoding="utf8").strip().split(".")[0])
+
+        return duration
+
     def add_sound(
         self,
         sound_file_path: Path,
@@ -106,10 +132,19 @@ class Player:
             sound_volume=initial_sound_volume,
             sound_speed=initial_sound_speed,
         )
+
+        duration = self._get_duration(new_sound)
+        new_sound._duration = duration
+
         self.sound_files.append(new_sound)
         return new_sound
 
-    def play(self, sound: Sound, loop: int = 0) -> None:
+    def play(
+        self,
+        sound: Sound,
+        loop: int = 0,
+        start_on_sec: int = 0,
+    ) -> None:
         """
         loop:
             0 = no loop
@@ -134,7 +169,7 @@ class Player:
 
         speed = sound.settings.speed if sound.settings.speed else self.settings.speed
         app_params.extend(["-af", f"atempo={speed}"])
-
+        app_params.extend(["-ss", f"{start_on_sec}"])
         app_params.append(str(sound.sound_file_path))
 
         process = subprocess.Popen(app_params)
