@@ -155,7 +155,7 @@ class Player:
         if sound.process:
             self._reset_process_state(sound)
 
-        app_name = self.settings.app_name
+        app_name = self.settings.app_name.lower()
         app_params = [app_name]
         app_params.extend(self._app_args)
 
