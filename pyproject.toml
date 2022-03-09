@@ -5,7 +5,7 @@ description = ""
 authors = ["Tutor Exilius <tutorexilius@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.7"
 psutil = "^5.9.0"
 
 [tool.poetry.dev-dependencies]
