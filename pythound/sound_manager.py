@@ -209,13 +209,12 @@ class Player:
             time.sleep(looped_duration)
             sound._process.suspend()  # type: ignore
 
-        sound._process.resume()  # type: ignore
-
         thread = threading.Thread(
             target=timer,
             args=(self.settings.app_name, sound, start_on_sec),
             daemon=True,
         )
+        sound._process.resume()  # type: ignore
         sound._running_thread = thread
         thread.start()
 
