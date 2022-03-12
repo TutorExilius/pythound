@@ -310,9 +310,7 @@ class Player:
         try:
             process.terminate()
         except:  # noqa
-            pass
-
-        try:
-            process.kill()
-        except:  # noqa
-            pass
+            try:
+                process.kill()
+            except:  # noqa
+                pass
