@@ -6,7 +6,7 @@ install_requires = [
 
 setup(
     name="pythound",
-    version="1.1.0",
+    version="1.1.1",
     description="An async sound library for python.",
     license="MIT",
     author="Tutor Exilius",
