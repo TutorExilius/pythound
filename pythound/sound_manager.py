@@ -5,6 +5,7 @@ import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
+from types import TracebackType
 
 import psutil
 
@@ -108,6 +109,17 @@ class Player:
             self.settings = FFPLAY_Settings(self.__class__.__name__)
             self.settings.set_volume(player_volume)
             self.settings.set_speed(player_speed)
+
+    def __enter__(self) -> Player:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[BaseException],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        self.stop_all()
 
     def _get_duration(self, sound: Sound) -> int:
         duration: int = -1
