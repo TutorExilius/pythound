@@ -34,7 +34,11 @@ class FFPLAY_Settings:
         else:
             supported_volume_range_str = "{} - {}".format(*self.supported_volume_range)
             print(
-                f"{self.app_name} ({self._parent_class_name}): Can't set volume to {volume} (supported values: {supported_volume_range_str}).",
+                (
+                    f"{self.app_name} ({self._parent_class_name}): "
+                    f"Can't set volume to {volume} "
+                    f"(supported values: {supported_volume_range_str})."
+                ),
                 flush=True,
             )
             return False
@@ -55,7 +59,11 @@ class FFPLAY_Settings:
         else:
             supported_speed_range_str = "{} - {}".format(*self.supported_speed_range)
             print(
-                f"{self.app_name} ({self._parent_class_name}): Can't set speed to {speed} (supported values: {supported_speed_range_str}).",
+                (
+                    f"{self.app_name} ({self._parent_class_name}): "
+                    f"Can't set speed to {speed} "
+                    f"(supported values: {supported_speed_range_str})."
+                ),
                 flush=True,
             )
             return False
@@ -87,7 +95,10 @@ class Sound:
 
 class Player:
     def __init__(
-        self, app_name="FFPLAY", player_volume: int = 100, player_speed: float = 1.0
+        self,
+        app_name: str = "FFPLAY",
+        player_volume: int = 100,
+        player_speed: float = 1.0,
     ) -> None:
         self.sound_files: List[Sound] = []  # {sound_id:
         self._app_args: List[str] = []
@@ -188,7 +199,7 @@ class Player:
 
         print(f"Play '{sound.sound_file_path}'.", flush=True)
 
-        def timer(app_name, sound, start_on_sec):
+        def timer(app_name: str, sound: Sound, start_on_sec: int) -> None:
             if sound._loop is None:
                 return
 
@@ -196,9 +207,9 @@ class Player:
                 looped_duration = (sound._duration - start_on_sec) * sound._loop
 
             time.sleep(looped_duration)
-            sound._process.suspend()
+            sound._process.suspend()  # type: ignore
 
-        sound._process.resume()
+        sound._process.resume()  # type: ignore
 
         thread = threading.Thread(
             target=timer,
@@ -232,14 +243,18 @@ class Player:
     def continue_sound(self, sound: Sound) -> None:
         if not sound._process:
             print(
-                f"Error in continuing '{sound.sound_file_path}', sound is not paused OR is a sound effect, which can't be continued.",
+                f"Error in continuing '{sound.sound_file_path}',"
+                f"sound is not paused OR is a sound effect, which can't be continued.",
                 flush=True,
             )
             return
 
         if sound._process.status() == psutil.STATUS_RUNNING:
             print(
-                f"Error in contining '{sound.sound_file_path}', sound is already playing.",
+                (
+                    f"Error in contining '{sound.sound_file_path}', "
+                    f"sound is already playing."
+                ),
                 flush=True,
             )
         elif sound._process.status() in (
@@ -256,7 +271,10 @@ class Player:
     def pause_sound(self, sound: Sound) -> None:
         if not sound._process:
             print(
-                f"Error in pausing '{sound.sound_file_path}', sound is not playing OR is a sound effect, which can't paused.",
+                (
+                    f"Error in pausing '{sound.sound_file_path}', "
+                    f"sound is not playing OR is a sound effect, which can't paused."
+                ),
                 flush=True,
             )
             return
@@ -271,7 +289,10 @@ class Player:
             psutil.STATUS_SLEEPING,
         ):
             print(
-                f"Error in pausing '{sound.sound_file_path}', sound is already paused or stopped.",
+                (
+                    f"Error in pausing '{sound.sound_file_path}', "
+                    f"sound is already paused or stopped.",
+                ),
                 flush=True,
             )
         else:
@@ -288,10 +309,10 @@ class Player:
 
         try:
             process.terminate()
-        except:
+        except:  # noqa
             pass
 
         try:
             process.kill()
-        except:
+        except:  # noqa
             pass
