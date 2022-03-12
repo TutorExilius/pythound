@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import threading
+import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -68,9 +70,10 @@ class Sound:
         sound_speed: Optional[float] = None,
     ) -> None:
         self.sound_file_path: Path = sound_file_path
-        self.process: Optional[psutil.Process] = None
+        self._process: Optional[psutil.Process] = None
         self._loop: Optional[int] = None
         self._duration: int = 0
+        self._running_thread: Optional[threading.Thread] = None
 
         if app_name.lower() == "ffplay":
             self.settings = FFPLAY_Settings(self.__class__.__name__)
@@ -120,6 +123,27 @@ class Player:
 
         return duration
 
+    def _create_process(self, sound: Sound, start_on_sec: int) -> None:
+        app_name = self.settings.app_name.lower()
+        app_params = [app_name]
+        app_params.extend(self._app_args)
+
+        volume = (
+            sound.settings.volume if sound.settings.volume else self.settings.volume
+        )
+        app_params.extend(["-volume", str(volume)])
+        app_params.extend(["-loop", "-1"])
+
+        speed = sound.settings.speed if sound.settings.speed else self.settings.speed
+        app_params.extend(["-af", f"atempo={speed}"])
+        app_params.extend(["-ss", f"{start_on_sec}"])
+        app_params.append(str(sound.sound_file_path))
+
+        ps_process = psutil.Popen(app_params)
+        ps_process.suspend()
+
+        sound._process = ps_process
+
     def add_sound(
         self,
         sound_file_path: Path,
@@ -142,57 +166,60 @@ class Player:
     def play(
         self,
         sound: Sound,
-        loop: int = 0,
+        loop: int = 1,
         start_on_sec: int = 0,
     ) -> None:
         """
         loop:
-            0 = no loop
             n = loop n times
-            -1 = infinite loop
+            0 = endless
         """
 
-        if sound.process:
+        if loop <= 0:
+            sound._loop = None
+        else:
+            sound._loop = loop
+
+        if sound._process is None:
+            self._create_process(sound, start_on_sec)
+        elif sound._process.status() == psutil.STATUS_RUNNING:
             self._reset_process_state(sound)
+            self._create_process(sound, start_on_sec)
 
-        app_name = self.settings.app_name.lower()
-        app_params = [app_name]
-        app_params.extend(self._app_args)
-
-        volume = (
-            sound.settings.volume if sound.settings.volume else self.settings.volume
-        )
-        app_params.extend(["-volume", str(volume)])
-
-        if loop != 0:
-            app_params.extend(["-loop", str(loop)])
-
-        speed = sound.settings.speed if sound.settings.speed else self.settings.speed
-        app_params.extend(["-af", f"atempo={speed}"])
-        app_params.extend(["-ss", f"{start_on_sec}"])
-        app_params.append(str(sound.sound_file_path))
-
-        process = subprocess.Popen(app_params)
         print(f"Play '{sound.sound_file_path}'.", flush=True)
 
-        ps_process = psutil.Process(pid=process.pid)
-        sound.process = ps_process
-        sound._loop = loop
+        def timer(app_name, sound, start_on_sec):
+            if sound._loop is None:
+                return
+
+            if app_name.lower() == "ffplay":
+                looped_duration = (sound._duration - start_on_sec) * sound._loop
+
+            time.sleep(looped_duration)
+            sound._process.suspend()
+
+        sound._process.resume()
+
+        thread = threading.Thread(
+            target=timer,
+            args=(self.settings.app_name, sound, start_on_sec),
+            daemon=True,
+        )
+        sound._running_thread = thread
+        thread.start()
 
     def wait_for(self, sound: Sound) -> None:
-        if not sound.process or sound.process.status() != psutil.STATUS_RUNNING:
+        if not sound._process or sound._process.status() != psutil.STATUS_RUNNING:
             return
 
-        if sound._loop != -1:
-            sound.process.wait()
-        else:
-            print(
-                "Error in wait_for(): can't wait for a sound, which is in endless loop.",
-                flush=True,
-            )
+        while True:
+            if sound._process.status() == psutil.STATUS_RUNNING:
+                time.sleep(0.1)
+            else:
+                break
 
     def stop(self, sound: Sound) -> None:
-        if not sound.process:
+        if not sound._process:
             return
 
         self._reset_process_state(sound)
@@ -203,54 +230,61 @@ class Player:
             self.stop(sound)
 
     def continue_sound(self, sound: Sound) -> None:
-        if not sound.process:
+        if not sound._process:
             print(
                 f"Error in continuing '{sound.sound_file_path}', sound is not paused OR is a sound effect, which can't be continued.",
                 flush=True,
             )
             return
 
-        if sound.process.status() == psutil.STATUS_RUNNING:
+        if sound._process.status() == psutil.STATUS_RUNNING:
             print(
                 f"Error in contining '{sound.sound_file_path}', sound is already playing.",
                 flush=True,
             )
-        elif sound.process.status() in (
+        elif sound._process.status() in (
             psutil.STATUS_STOPPED,
             psutil.STATUS_PARKED,
             psutil.STATUS_DISK_SLEEP,
+            psutil.STATUS_SLEEPING,
         ):
-            sound.process.resume()
+            sound._process.resume()
             print(f"Continue '{sound.sound_file_path}'.", flush=True)
         else:
             self._reset_process_state(sound)
 
     def pause_sound(self, sound: Sound) -> None:
-        if not sound.process:
+        if not sound._process:
             print(
                 f"Error in pausing '{sound.sound_file_path}', sound is not playing OR is a sound effect, which can't paused.",
                 flush=True,
             )
             return
 
-        if sound.process.status() == psutil.STATUS_RUNNING:
-            sound.process.suspend()
+        if sound._process.status() == psutil.STATUS_RUNNING:
+            sound._process.suspend()
             print(f"Pause '{sound.sound_file_path}'.", flush=True)
-        elif sound.process.status() == psutil.STATUS_SUSPENDED:
+        elif sound._process.status() in (
+            psutil.STATUS_STOPPED,
+            psutil.STATUS_PARKED,
+            psutil.STATUS_DISK_SLEEP,
+            psutil.STATUS_SLEEPING,
+        ):
             print(
-                f"Error in pausing '{sound.sound_file_path}', sound is already paused.",
+                f"Error in pausing '{sound.sound_file_path}', sound is already paused or stopped.",
                 flush=True,
             )
         else:
             self._reset_process_state(sound)
 
     def _reset_process_state(self, sound: Sound) -> None:
-        if sound.process is None:
+        if sound._process is None:
             return
 
-        process = sound.process
+        process = sound._process
+        sound._process = None
         sound._loop = None
-        sound.process = None
+        sound._running_thread = None
 
         try:
             process.terminate()
