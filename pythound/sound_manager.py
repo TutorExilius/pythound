@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 from types import TracebackType
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import psutil
 
@@ -170,10 +170,13 @@ class Player:
 
     def add_sound(
         self,
-        sound_file_path: Path,
+        sound_file_path: Union[Path, str],
         initial_sound_volume: Optional[int] = None,
         initial_sound_speed: Optional[int] = None,
     ) -> Sound:
+        if isinstance(sound_file_path, str):
+            sound_file_path = Path(sound_file_path)
+
         new_sound = Sound(
             self.settings.app_name,
             sound_file_path=sound_file_path,
