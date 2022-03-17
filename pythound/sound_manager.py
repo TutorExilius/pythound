@@ -80,6 +80,9 @@ class Sound:
         sound_volume: Optional[int] = None,
         sound_speed: Optional[float] = None,
     ) -> None:
+        if not sound_file_path.exists():
+            raise FileNotFoundError(f"File not found: '{sound_file_path}'")
+
         self.sound_file_path: Path = sound_file_path
         self._process: Optional[psutil.Process] = None
         self._duration: int = 0
