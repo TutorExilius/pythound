@@ -21,7 +21,7 @@ strict_equality = true
 
 [tool.poetry]
 name = "pythound"
-version = "1.4.0"
+version = "1.5.0"
 description = "An async sound library for python."
 authors = ["Tutor Exilius <tutorexilius@gmail.com>"]
 

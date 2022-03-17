@@ -220,16 +220,7 @@ class Player:
         if sound._process is None or sound._process.status() != psutil.STATUS_RUNNING:
             return
 
-        if sound._loop != 0:
-            sound._process.wait()
-        else:
-            print(
-                (
-                    "Error in wait_for(): can't wait for a sound, "
-                    "which is in endless loop."
-                ),
-                flush=True,
-            )
+        sound._process.wait()
 
     def stop(self, sound: Sound) -> None:
         if not sound._process:
