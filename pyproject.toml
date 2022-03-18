@@ -8,7 +8,6 @@ exclude = '''
 [tool.mypy]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-disallow_any_explicit = true
 disallow_any_generics = true
 disallow_untyped_calls = true
 no_implicit_optional = true
@@ -21,7 +20,7 @@ strict_equality = true
 
 [tool.poetry]
 name = "pythound"
-version = "1.5.0"
+version = "1.6.0"
 description = "An async sound library for python."
 authors = ["Tutor Exilius <tutorexilius@gmail.com>"]
 

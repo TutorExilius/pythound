@@ -3,79 +3,17 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 from types import TracebackType
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 import psutil
-
-
-class FFPLAY_Settings:
-    def __init__(self, parent_class_name: str = ""):
-        self._app_name: str = "ffplay"
-        self._parent_class_name = parent_class_name
-        self.supported_volume_range: Tuple[int, int] = (0, 100)
-        self.supported_speed_range: Tuple[float, float] = (0.5, 100.0)
-        self._volume: Optional[int] = None
-        self._speed: Optional[float] = None
-
-    @property
-    def app_name(self) -> str:
-        return self._app_name
-
-    @property
-    def volume(self) -> Optional[int]:
-        return self._volume
-
-    def set_volume(self, volume: int) -> bool:
-        min_volume, max_volume = self.supported_volume_range
-        if min_volume <= volume <= max_volume:
-            self._volume = volume
-            print(
-                f"{self.app_name} ({self._parent_class_name}): Set volume to {volume}.",
-                flush=True,
-            )
-            return True
-        else:
-            supported_volume_range_str = "{} - {}".format(*self.supported_volume_range)
-            print(
-                (
-                    f"{self.app_name} ({self._parent_class_name}): "
-                    f"Can't set volume to {volume} "
-                    f"(supported values: {supported_volume_range_str})."
-                ),
-                flush=True,
-            )
-            return False
-
-    @property
-    def speed(self) -> Optional[float]:
-        return self._speed
-
-    def set_speed(self, speed: float) -> bool:
-        min_speed, max_speed = self.supported_speed_range
-        if min_speed <= speed <= max_speed:
-            self._speed = speed
-            print(
-                f"{self.app_name} ({self._parent_class_name}): Set speed to {speed}.",
-                flush=True,
-            )
-            return True
-        else:
-            supported_speed_range_str = "{} - {}".format(*self.supported_speed_range)
-            print(
-                (
-                    f"{self.app_name} ({self._parent_class_name}): "
-                    f"Can't set speed to {speed} "
-                    f"(supported values: {supported_speed_range_str})."
-                ),
-                flush=True,
-            )
-            return False
+from pythound.settings import Settings
+from pythound.settings import SupportedApps
 
 
 class Sound:
     def __init__(
         self,
-        app_name: str,
+        app_name: SupportedApps,
         sound_file_path: Path,
         sound_volume: Optional[int] = None,
         sound_speed: Optional[float] = None,
@@ -88,8 +26,11 @@ class Sound:
         self._duration: int = 0
         self._loop: Optional[int] = None
 
-        if app_name.lower() == "ffplay":
-            self.settings = FFPLAY_Settings(self.__class__.__name__)
+        if app_name == SupportedApps.FFPLAY:
+            self.settings = Settings(
+                self.__class__.__name__,
+                app_name,
+            )
 
             if sound_volume:
                 self.settings.set_volume(sound_volume)
@@ -101,18 +42,23 @@ class Sound:
 class Player:
     def __init__(
         self,
-        app_name: str = "ffplay",
-        player_volume: int = 100,
-        player_speed: float = 1.0,
+        app_name: SupportedApps = SupportedApps.FFPLAY,
+        player_volume: Optional[int] = None,
+        player_speed: Optional[float] = None,
     ) -> None:
         self.sound_files: List[Sound] = []  # {sound_id:
-        self._app_args: List[str] = []
 
-        if app_name.lower() == "ffplay":
-            self._app_args = ["-nodisp", "-autoexit", "-loglevel", "quiet"]
-            self.settings = FFPLAY_Settings(self.__class__.__name__)
-            self.settings.set_volume(player_volume)
-            self.settings.set_speed(player_speed)
+        if app_name == SupportedApps.FFPLAY:
+            self.settings = Settings(
+                self.__class__.__name__,
+                app_name,
+            )
+
+            if player_volume:
+                self.settings.set_volume(player_volume)
+
+            if player_speed:
+                self.settings.set_speed(player_speed)
 
     def __enter__(self) -> Player:
         return self
@@ -128,7 +74,7 @@ class Player:
     def _get_duration(self, sound: Sound) -> int:
         duration: int = -1
 
-        if self.settings.app_name == "ffplay":
+        if self.settings.app_name == SupportedApps.FFPLAY:
             ffprobe_args = [
                 "ffprobe",
                 "-i",
@@ -151,9 +97,7 @@ class Player:
         return duration
 
     def _create_process(self, sound: Sound, start_on_sec: int, loop: int) -> None:
-        app_name = self.settings.app_name
-        app_params = [app_name]
-        app_params.extend(self._app_args)
+        app_params = self.settings.get_app_args()
 
         volume = (
             sound.settings.volume if sound.settings.volume else self.settings.volume
@@ -202,7 +146,7 @@ class Player:
             0 = endless
         """
 
-        if self.settings.app_name == "ffplay":
+        if self.settings.app_name == SupportedApps.FFPLAY:
             if start_on_sec < 0:
                 start_on_sec = 0
 
